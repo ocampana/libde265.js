@@ -1,5 +1,6 @@
 #!/bin/bash
-export LIBDE265_VERSION=1.0.2
+export LIBDE265_VERSION=1.0.4
+export DOCKER="docker run --rm -v `pwd`/libde265-${LIBDE265_VERSION}:/src trzeci/emscripten"
 
 if [ ! -e "libde265-${LIBDE265_VERSION}.tar.gz" ]; then
     wget https://github.com/strukturag/libde265/releases/download/v${LIBDE265_VERSION}/libde265-${LIBDE265_VERSION}.tar.gz
@@ -7,10 +8,10 @@ fi
 
 if [ ! -e "libde265-${LIBDE265_VERSION}/libde265/.libs/libde265.so" ]; then
     tar xzf libde265-${LIBDE265_VERSION}.tar.gz
-    cd libde265-${LIBDE265_VERSION}
-    emconfigure ./configure --disable-sse --disable-dec265 --disable-sherlock265
-    emmake make
-    cd ..
+    #cd libde265-${LIBDE265_VERSION}
+    docker run --rm -v `pwd`/libde265-${LIBDE265_VERSION}:/src trzeci/emscripten emconfigure ./configure --disable-sse --disable-dec265 --disable-sherlock265
+    docker run --rm -v `pwd`/libde265-${LIBDE265_VERSION}:/src trzeci/emscripten emmake make
+    #cd ..
 fi
 
 export TOTAL_MEMORY=16777216
@@ -62,13 +63,12 @@ export LIBRARY_FUNCTIONS="[ \
 ]"
 
 echo "Running Emscripten..."
-emcc libde265-${LIBDE265_VERSION}/libde265/.libs/libde265.so \
+docker run --rm -v `pwd`:/src trzeci/emscripten emcc libde265-${LIBDE265_VERSION}/libde265/.libs/libde265.so \
     -s NO_EXIT_RUNTIME=1 \
     -s TOTAL_MEMORY=${TOTAL_MEMORY} \
     -s ALLOW_MEMORY_GROWTH=1 \
     -s ASSERTIONS=0 \
     -s INVOKE_RUN=0 \
-    -s PRECISE_I32_MUL=0 \
     -s DISABLE_EXCEPTION_CATCHING=1 \
     -s EXPORTED_FUNCTIONS="${EXPORTED_FUNCTIONS}" \
     -s DEFAULT_LIBRARY_FUNCS_TO_INCLUDE="${LIBRARY_FUNCTIONS}" \
@@ -78,13 +78,12 @@ emcc libde265-${LIBDE265_VERSION}/libde265/.libs/libde265.so \
     -o lib/libde265.js
 
 echo "Running Emscripten (minimized)..."
-emcc libde265-${LIBDE265_VERSION}/libde265/.libs/libde265.so \
+docker run --rm -v `pwd`:/src trzeci/emscripten emcc libde265-${LIBDE265_VERSION}/libde265/.libs/libde265.so \
     -s NO_EXIT_RUNTIME=1 \
     -s TOTAL_MEMORY=${TOTAL_MEMORY} \
     -s ALLOW_MEMORY_GROWTH=1 \
     -s ASSERTIONS=0 \
     -s INVOKE_RUN=0 \
-    -s PRECISE_I32_MUL=0 \
     -s DISABLE_EXCEPTION_CATCHING=1 \
     -s EXPORTED_FUNCTIONS="${EXPORTED_FUNCTIONS}" \
     -s DEFAULT_LIBRARY_FUNCS_TO_INCLUDE="${LIBRARY_FUNCTIONS}" \
@@ -92,5 +91,4 @@ emcc libde265-${LIBDE265_VERSION}/libde265/.libs/libde265.so \
     --pre-js pre.js \
     --post-js post.js \
     -o lib/libde265.min.js \
-    -s CLOSURE_ANNOTATIONS=1 \
     --closure 1
